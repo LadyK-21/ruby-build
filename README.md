@@ -1,34 +1,37 @@
 # ruby-build
 
-ruby-build is a command-line utility that makes it easy to install virtually any
-version of Ruby, from source.
+ruby-build is a command-line tool that simplifies installation of any Ruby version from source on Unix-like systems.
 
-It is available as a plugin for [rbenv][] that
-provides the `rbenv install` command, or as a standalone program.
+It is available as a plugin for [rbenv][] as the `rbenv install` command, or as a standalone program as the `ruby-build` command.
 
 ## Installation
 
+### Homebrew package manager
 ```sh
-# Using Homebrew on macOS
-$ brew install ruby-build
-
-# As an rbenv plugin
-$ mkdir -p "$(rbenv root)"/plugins
-$ git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
-
-# As a standalone program
-$ git clone https://github.com/rbenv/ruby-build.git
-$ PREFIX=/usr/local ./ruby-build/install.sh
+brew install ruby-build
 ```
 
-### Upgrading
-
+Upgrade with:
 ```sh
-# Via Homebrew
-$ brew update && brew upgrade ruby-build
+brew upgrade ruby-build
+```
 
-# As an rbenv plugin
-$ git -C "$(rbenv root)"/plugins/ruby-build pull
+### Clone as rbenv plugin using git
+```sh
+git clone https://github.com/rbenv/ruby-build.git "$(rbenv root)"/plugins/ruby-build
+```
+
+Upgrade with:
+```sh
+git -C "$(rbenv root)"/plugins/ruby-build pull
+```
+
+### Install manually as a standalone program
+
+First, download a tarball from https://github.com/rbenv/ruby-build/releases/latest. Then:
+```sh
+tar -xzf ruby-build-*.tar.gz
+PREFIX=/usr/local ./ruby-build-*/install.sh
 ```
 
 ## Usage
@@ -36,29 +39,35 @@ $ git -C "$(rbenv root)"/plugins/ruby-build pull
 ### Basic Usage
 
 ```sh
-# As an rbenv plugin
-$ rbenv install --list                 # lists all available versions of Ruby
-$ rbenv install 2.2.0                  # installs Ruby 2.2.0 to ~/.rbenv/versions
-
 # As a standalone program
-$ ruby-build --definitions             # lists all available versions of Ruby
-$ ruby-build 2.2.0 ~/local/ruby-2.2.0  # installs Ruby 2.2.0 to ~/local/ruby-2.2.0
+$ ruby-build --list                        # lists latest stable releases for each Ruby
+$ ruby-build --definitions                 # lists all definitions, including outdated ones
+$ ruby-build 3.2.2 ~/.rubies/ruby-3.2.2    # installs Ruby 3.2.2
+$ ruby-build -d ruby-3.2.2 ~/.rubies       # alternate form for the previous example
+
+# As an rbenv plugin
+$ rbenv install 3.2.2  # installs Ruby 3.2.2 to ~/.rbenv/versions/3.2.2
 ```
 
-ruby-build does not check for system dependencies before downloading and
-attempting to compile the Ruby source. Please ensure that [all requisite
-libraries][build-env] are available on your system.
+> [!WARNING]
+> ruby-build mostly does not verify that system dependencies are present before downloading and attempting to compile Ruby from source. Please ensure that [all requisite libraries][build-env] such as build tools and development headers are already present on your system.
+
+Basically, what ruby-build does when installing a Ruby version is this:
+- Downloads an official tarball of Ruby source code;
+- Extracts the archive into a temporary directory on your system;
+- Executes `./configure --prefix=/path/to/destination` in the source code;
+- Runs `make install` to compile Ruby;
+- Verifies that the installed Ruby is functional.
+
+Depending on the context, ruby-build does a little bit more than the above: for example, it will try to link Ruby to the appropriate OpenSSL version, even if that means downloading and compiling OpenSSL itself; it will discover and link to Homebrew-installed instances of some libraries like libyaml and readline, etc.
 
 ### Advanced Usage
 
 #### Custom Build Definitions
 
-If you wish to develop and install a version of Ruby that is not yet supported
-by ruby-build, you may specify the path to a custom “build definition file” in
-place of a Ruby version number.
+To install a version of Ruby that is not recognized by ruby-build, you can specify the path to a custom build definition file in place of a Ruby version number.
 
-Use the [default build definitions][definitions] as a template for your custom
-definitions.
+Check out [default build definitions][definitions] as examples on how to write definition files.
 
 #### Custom Build Configuration
 
@@ -74,10 +83,12 @@ The build process may be configured through the following environment variables:
 | `RUBY_BUILD_CURL_OPTS`          | Additional options to pass to `curl` for downloading.                                            |
 | `RUBY_BUILD_WGET_OPTS`          | Additional options to pass to `wget` for downloading.                                            |
 | `RUBY_BUILD_MIRROR_URL`         | Custom mirror URL root.                                                                          |
-| `RUBY_BUILD_MIRROR_PACKAGE_URL` | Custom complete mirror URL (e.g. http://mirror.example.com/package-1.0.0.tar.gz).                  |
+| `RUBY_BUILD_MIRROR_PACKAGE_URL` | Custom complete mirror URL (e.g. http://mirror.example.com/package-1.0.0.tar.gz).                |
 | `RUBY_BUILD_SKIP_MIRROR`        | Bypass the download mirror and fetch all package files from their original URLs.                 |
-| `RUBY_BUILD_ROOT`               | Custom build definition directory. (Default: `share/ruby-build`)                                 |
-| `RUBY_BUILD_DEFINITIONS`        | Additional paths to search for build definitions. (Colon-separated list)                         |
+| `RUBY_BUILD_TARBALL_OVERRIDE`   | Override the URL to fetch the ruby tarball from, optionally followed by `#checksum`.             |
+| `RUBY_BUILD_DEFINITIONS`        | Colon-separated list of paths to search for build definition files.                              |
+| `RUBY_BUILD_ROOT`               | The path prefix to search for build definitions files. *Deprecated:* use `RUBY_BUILD_DEFINITIONS`|
+| `RUBY_BUILD_VENDOR_OPENSSL`     | Build and vendor openssl even if the system openssl is compatible                                |
 | `CC`                            | Path to the C compiler.                                                                          |
 | `RUBY_CFLAGS`                   | Additional `CFLAGS` options (_e.g.,_ to override `-O3`).                                         |
 | `CONFIGURE_OPTS`                | Additional `./configure` options.                                                                |
@@ -87,12 +98,12 @@ The build process may be configured through the following environment variables:
 | `RUBY_CONFIGURE_OPTS`           | Additional `./configure` options (applies only to Ruby source).                                  |
 | `RUBY_MAKE_OPTS`                | Additional `make` options (applies only to Ruby source).                                         |
 | `RUBY_MAKE_INSTALL_OPTS`        | Additional `make install` options (applies only to Ruby source).                                 |
+| `NO_COLOR`                      | Disable ANSI colors in output. The default is to use colors for output connected to a terminal.  |
+| `CLICOLOR_FORCE`                | Use ANSI colors in output even when not connected to a terminal.                                 |
 
 #### Applying Patches
 
-Both `rbenv install` and `ruby-build` support the `--patch` (`-p`) flag to apply
-a patch to the Ruby (/JRuby/Rubinius/TruffleRuby) source code before building.
-Patches are read from `STDIN`:
+Both `rbenv install` and `ruby-build` commands support the `-p/--patch` flag to apply a patch to the Ruby source code before building. Patches are read from standard input:
 
 ```sh
 # applying a single patch
@@ -107,12 +118,9 @@ $ cat fix1.patch fix2.patch | rbenv install --patch 1.9.3-p429
 
 #### Checksum Verification
 
-If you have the `shasum`, `openssl`, or `sha256sum` tool installed, ruby-build will
-automatically verify the SHA2 checksum of each downloaded package before
-installing it.
+All Ruby definition files bundled with ruby-build include checksums for packages, meaning that all externally downloaded packages are automatically checked for integrity after fetching.
 
-Checksums are optional and specified as anchors on the package URL in each
-definition. All definitions bundled with ruby-build include checksums.
+See the next section for more information on how to author checksums.
 
 #### Package Mirrors
 
@@ -161,7 +169,7 @@ If you can't find an answer on the wiki, open an issue on the [issue tracker][].
 Be sure to include the full build log for build failures.
 
 
-  [rbenv]: https://github.com/rbenv/rbenv
+  [rbenv]: https://github.com/rbenv/rbenv#readme
   [definitions]: https://github.com/rbenv/ruby-build/tree/master/share/ruby-build
   [wiki]: https://github.com/rbenv/ruby-build/wiki
   [build-env]: https://github.com/rbenv/ruby-build/wiki#suggested-build-environment
