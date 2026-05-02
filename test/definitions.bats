@@ -113,6 +113,16 @@ NUM_DEFINITIONS="$(ls "$BATS_TEST_DIRNAME"/../share/ruby-build | wc -l)"
   assert_success "3.2.1"
 }
 
+@test "resolve definition by exact match for ruby-prefixed name" {
+  export RUBY_BUILD_DEFINITIONS="${TMP}/definitions"
+  mkdir -p "${TMP}/definitions"
+
+  touch "${TMP}/definitions/ruby-dev"
+
+  run bin/ruby-build --resolve "ruby-dev"
+  assert_success "ruby-dev"
+}
+
 @test "resolve definition with ruby prefix" {
   export RUBY_BUILD_DEFINITIONS="${TMP}/definitions"
   mkdir -p "${TMP}/definitions"
