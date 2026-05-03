@@ -1420,6 +1420,10 @@ resolve_version() {
 
   # Look for an exact match first.
   for DEFINITION_DIR in "${RUBY_BUILD_DEFINITIONS[@]}"; do
+    if [ -f "${DEFINITION_DIR}/$1" ]; then
+      echo "$1"
+      return 0
+    fi
     if [ -f "${DEFINITION_DIR}/${version}" ]; then
       echo "$version"
       return 0
